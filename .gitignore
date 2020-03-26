@@ -15,6 +15,7 @@ lfw
 pairs.txt
 people.txt
 vggface2
+vggface2_*
 train
 test
 

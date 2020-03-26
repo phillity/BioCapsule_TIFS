@@ -12,10 +12,38 @@ from model.facenet import facenet
 from model.mtcnn.mtcnn import MtcnnDetector
 
 
+os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = "0"
+
+
+def resize(image, image_size=160, inter=cv2.INTER_AREA):
+    # initialize the dimensions of the image to be resized and
+    # grab the image size
+    dim = None
+    (h, w) = image.shape[:2]
+
+    # image height and width are the same
+    if h == w:
+        return cv2.resize(image, (image_size, image_size), interpolation=inter)
+
+    # if image height is greater than height
+    elif h > w:
+        r = image_size / float(h)
+        dim = (int(w * r), image_size)
+        resized = cv2.resize(image, dim, interpolation=inter)
+        return cv2.copyMakeBorder(resized, 0, 0, image_size - resized.shape[1], 0, cv2.BORDER_CONSTANT, 0)
+
+    # if image width is greater than height
+    else:
+        r = image_size / float(w)
+        dim = (image_size, int(h * r))
+        resized = cv2.resize(image, dim, interpolation=inter)
+        return cv2.copyMakeBorder(resized, image_size - resized.shape[0], 0, 0, 0, cv2.BORDER_CONSTANT, 0)
+
+
 class ArcFace:
     def __init__(self, gpu_id):
         self.__model = FaceAnalysis(
-            det_name="retinaface_r50_v1",
+            det_name="retinaface_mnet025_v2",
             rec_name="arcface_r100_v1",
             ga_name=None
         )
@@ -198,23 +226,16 @@ def extract_dataset(dataset, method, gpu):
     y = fi_out.create_dataset(
         "y", (image_cnt,), dtype="i", compression="gzip", compression_opts=9)
 
-    X_flip = fi_out.create_dataset(
-        "X_flip", (image_cnt, 512), dtype="f", compression="gzip", compression_opts=9)
-    y_flip = fi_out.create_dataset(
-        "y_flip", (image_cnt,), dtype="i", compression="gzip", compression_opts=9)
-
     start = time()
 
     for subject_y, subject_dir in enumerate(os.listdir(os.path.join(os.path.abspath(""), "image", dataset))):
         for image_fi in os.listdir(os.path.join(os.path.abspath(""), "image", dataset, subject_dir)):
             image = cv2.imread(os.path.join(
                 os.path.abspath(""), "image", dataset, subject_dir, image_fi))
-            image_flip = cv2.flip(image, 1)
-
+            image = resize(image)
+            
             X[cnt] = model.embed(image)
             y[cnt] = subject_y + 1
-            X_flip[cnt] = model.embed(image_flip)
-            y_flip[cnt] = subject_y + 1
 
             end = time()
 
