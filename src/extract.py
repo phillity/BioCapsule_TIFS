@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 from time import time
 import h5py
@@ -79,21 +80,25 @@ def progress_bar(text, percent, barLen=20):
 
 
 def extract(dataset, method, gpu, batch_size):
+    print("Loading model...")
     if method == "arcface":
         model = ArcFace(gpu)
     if method == "facenet":
         model = FaceNet(gpu)
 
+    print("Loading image generator...")
     image_gen = ImageGenerator(os.path.join(
         os.path.abspath(""), "image", dataset), batch_size)
 
+    print("Creating output file...")
     fi_out = h5py.File(os.path.join(os.path.abspath(
         ""), "data", method, "{}.hdf5".format(dataset)), "w")
     X = fi_out.create_dataset(
         "X", (image_gen.image_cnt, 512), dtype="f", compression="lzf")
     y = fi_out.create_dataset(
-        "y", (image_gen.image_cnt,), dtype=h5py.string_dtype(encoding="ascii"), compression="lzf")
+        "y", (image_gen.image_cnt,), dtype=h5py.string_dtype(encoding="ascii"))
 
+    print("Starting feature extraction...")
     cnt = 0
     start = time()
     for i in range(image_gen.batch_cnt):
@@ -109,6 +114,7 @@ def extract(dataset, method, gpu, batch_size):
         avg_time = (end - start) / cnt
         progress_bar("Extracting {} using {} -- Batch {}/{} -- Time per image {:03f}sec".format(
             dataset, method, (i + 1), image_gen.batch_cnt, avg_time / image_gen.batch_size), (i + 1) / image_gen.batch_cnt)
+        sys.stdout.flush()
 
     fi_out.close()
 
