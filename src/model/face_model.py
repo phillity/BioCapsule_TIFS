@@ -40,40 +40,41 @@ class FaceNet:
         self.__detector = MtcnnDetector(model_folder=os.path.join(
             os.path.abspath(""), "src", "model", "mtcnn"), ctx=ctx, accurate_landmark=True)
 
-    def embed(self, image):
-        dets = self.__detector.detect_face(image)
+    def embed(self, images):
+        align = np.zeros((images.shape[0], 160, 160, 3))
+        for i, image in enumerate(images):
+            dets = self.__detector.detect_face(image)
 
-        # if no faces detected in image, get embedding for entire image
-        if dets is None:
-            image = cv2.resize(image, (112, 112))
+            # if no faces detected in image, get embedding for entire image
+            if dets is None:
+                image = cv2.resize(image, (112, 112))
 
-        # if multiple faces detected in image, get embedding for centermost face
-        elif dets[0].shape[0] > 1:
-            bboxs, landmarks = dets
-            image_center = np.array([image.shape[0], image.shape[1]]) / 2
-            det_centers = [np.array([(bbox[1] + bbox[3]),
-                                     (bbox[0] + bbox[2])]) / 2 for bbox in bboxs]
-            dists = [np.linalg.norm(image_center - det_center)
-                     for det_center in det_centers]
+            # if multiple faces detected in image, get embedding for centermost face
+            elif dets[0].shape[0] > 1:
+                bboxs, landmarks = dets
+                image_center = np.array([image.shape[0], image.shape[1]]) / 2
+                det_centers = [np.array([(bbox[1] + bbox[3]),
+                                        (bbox[0] + bbox[2])]) / 2 for bbox in bboxs]
+                dists = [np.linalg.norm(image_center - det_center)
+                        for det_center in det_centers]
 
-            landmark = landmarks[np.argmin(dists)].reshape((2, 5)).T
-            bbox = bboxs[np.argmin(dists)][:4]
-            image = preprocess(image, bbox, landmark, image_size="112,112")
+                landmark = landmarks[np.argmin(dists)].reshape((2, 5)).T
+                bbox = bboxs[np.argmin(dists)][:4]
+                image = preprocess(image, bbox, landmark, image_size="112,112")
 
-        else:
-            landmark = dets[1].reshape((2, 5)).T
-            bbox = dets[0][0, :4]
-            image = preprocess(image, bbox, landmark, image_size="112,112")
+            else:
+                landmark = dets[1].reshape((2, 5)).T
+                bbox = dets[0][0, :4]
+                image = preprocess(image, bbox, landmark, image_size="112,112")
 
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, (160, 160))
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            align[i] = prewhiten(cv2.resize(image, (160, 160)))
 
-        input_blob = prewhiten(image)
-        input_blob = np.expand_dims(input_blob, axis=0)
-        feed_dict = {self.__images_placeholder: input_blob,
+        feed_dict = {self.__images_placeholder: align,
                      self.__phase_train_placeholder: False}
         embedding = self.__sess.run(
-            self.__embeddings, feed_dict=feed_dict)[0]
+            self.__embeddings, feed_dict=feed_dict)
+        embedding = normalize(embedding)
         return embedding
 
 
@@ -98,38 +99,39 @@ class ArcFace:
         model.set_params(arg_params, aux_params)
         return model
 
-    def embed(self, image):
-        dets = self.__detector.detect_face(image)
+    def embed(self, images):
+        align = np.zeros((images.shape[0], 3, 112, 112))
+        for i, image in enumerate(images):
+            dets = self.__detector.detect_face(image)
 
-        # if no faces detected in image, get embedding for entire image
-        if dets is None:
-            image = cv2.resize(image, (112, 112))
+            # if no faces detected in image, get embedding for entire image
+            if dets is None:
+                image = cv2.resize(image, (112, 112))
 
-        # if multiple faces detected in image, get embedding for centermost face
-        elif dets[0].shape[0] > 1:
-            bboxs, landmarks = dets
-            image_center = np.array([image.shape[0], image.shape[1]]) / 2
-            det_centers = [np.array([(bbox[1] + bbox[3]),
-                                     (bbox[0] + bbox[2])]) / 2 for bbox in bboxs]
-            dists = [np.linalg.norm(image_center - det_center)
-                     for det_center in det_centers]
+            # if multiple faces detected in image, get embedding for centermost face
+            elif dets[0].shape[0] > 1:
+                bboxs, landmarks = dets
+                image_center = np.array([image.shape[0], image.shape[1]]) / 2
+                det_centers = [np.array([(bbox[1] + bbox[3]),
+                                        (bbox[0] + bbox[2])]) / 2 for bbox in bboxs]
+                dists = [np.linalg.norm(image_center - det_center)
+                        for det_center in det_centers]
 
-            landmark = landmarks[np.argmin(dists)].reshape((2, 5)).T
-            bbox = bboxs[np.argmin(dists)][:4]
-            image = preprocess(image, bbox, landmark, image_size="112,112")
+                landmark = landmarks[np.argmin(dists)].reshape((2, 5)).T
+                bbox = bboxs[np.argmin(dists)][:4]
+                image = preprocess(image, bbox, landmark, image_size="112,112")
 
-        else:
-            landmark = dets[1].reshape((2, 5)).T
-            bbox = dets[0][0, :4]
-            image = preprocess(image, bbox, landmark, image_size="112,112")
+            else:
+                landmark = dets[1].reshape((2, 5)).T
+                bbox = dets[0][0, :4]
+                image = preprocess(image, bbox, landmark, image_size="112,112")
 
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = np.transpose(image, (2, 0, 1))
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            align[i] = np.transpose(image, (2, 0, 1))
 
-        input_blob = np.expand_dims(image, axis=0)
-        data = mx.nd.array(input_blob)
+        data = mx.nd.array(align)
         db = mx.io.DataBatch(data=(data,))
         self.__model.forward(db, is_train=False)
         embedding = self.__model.get_outputs()[0].asnumpy()
-        embedding = normalize(embedding).flatten()
+        embedding = normalize(embedding)
         return embedding

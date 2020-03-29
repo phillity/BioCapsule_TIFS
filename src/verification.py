@@ -53,7 +53,7 @@ def get_lfw(method, representation):
     rs_dataset = h5py.File(os.path.join(os.path.abspath(
         ""), "data", method, "rs.hdf5"), "r")
 
-    X, y = feature_dataset["X"][:], feature_dataset["y"][:].astype(int) - 1
+    X, y = feature_dataset["X"][:], feature_dataset["y"][:]
     rs_feature = rs_dataset["X"][0]
 
     if representation == "biocapsule":
@@ -62,12 +62,9 @@ def get_lfw(method, representation):
 
     X = np.hstack([X, y[:, np.newaxis]])
 
-    subjects = os.listdir(os.path.join(
-        os.path.abspath(""), "image", "lfw"))
-    subjects = [x for _, x in sorted(
-        zip([subject.lower() for subject in subjects], subjects))]
     subject = {}
-    for s_id, s in enumerate(subjects):
+    for s_id, s in enumerate(os.listdir(os.path.join(
+            os.path.abspath(""), "image", "lfw"))):
         subject[s] = s_id
 
     lfw = {}
@@ -82,11 +79,11 @@ def get_lfw(method, representation):
         train_idx = 0
         for s in train:
             s_id = subject[s[0]]
-            s_features = X[y == s_id]
+            s_features = X[y == s[0].encode()]
             assert (s_features.shape[0] == int(s[1]))
 
             for j in range(s_features.shape[0]):
-                lfw["train_{}".format(i)][train_idx] = s_features[j]
+                lfw["train_{}".format(i)][train_idx] = np.append(s_features[j, :-1], s_id).astype(float)
                 train_idx += 1
 
         assert (train_idx == train_cnt)
@@ -94,20 +91,20 @@ def get_lfw(method, representation):
         for test_idx, s in enumerate(test):
             if len(s) == 3:
                 s_id = subject[s[0]]
-                s_features = X[y == s_id]
+                s_features = X[y == s[0].encode()]
                 lfw["test_{}".format(i)][test_idx,
-                                         0] = s_features[int(s[1]) - 1]
+                                         0] = np.append(s_features[int(s[1]) - 1, :-1], s_id).astype(float)
                 lfw["test_{}".format(i)][test_idx,
-                                         1] = s_features[int(s[2]) - 1]
+                                         1] = np.append(s_features[int(s[2]) - 1, :-1], s_id).astype(float)
             else:
                 s_id_1 = subject[s[0]]
-                s_features = X[y == s_id_1]
+                s_features = X[y == s[0].encode()]
                 lfw["test_{}".format(i)][test_idx,
-                                         0] = s_features[int(s[1]) - 1]
+                                         0] = np.append(s_features[int(s[1]) - 1, :-1], s_id_1).astype(float)
                 s_id_2 = subject[s[2]]
-                s_features = X[y == s_id_2]
+                s_features = X[y == s[2].encode()]
                 lfw["test_{}".format(i)][test_idx,
-                                         1] = s_features[int(s[3]) - 1]
+                                         1] = np.append(s_features[int(s[3]) - 1, :-1], s_id_2).astype(float)
 
         assert (test_idx == 599)
 
