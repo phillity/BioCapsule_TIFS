@@ -3,12 +3,12 @@
 __pycache__
 *.pyc
 
-*.hdf5
-
-model/facenet/20180408-102900.pb
-model/mtcnn/det*
+src/model/facenet
+src/model/arcface
+src/model/mtcnn
 
 image_setup_util.sh
+rs
 caltech
 gtdb
 lfw
@@ -19,6 +19,8 @@ vggface2_*
 train
 test
 
+*.hdf5
+*.jpg
 *.tar
 *.gz
 *.tgz
