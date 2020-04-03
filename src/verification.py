@@ -54,13 +54,12 @@ def get_lfw(method, representation):
         ""), "data", method, "rs.hdf5"), "r")
 
     X, y = feature_dataset["X"][:], feature_dataset["y"][:]
+    y = np.array([label.decode() for label in y])
     rs_feature = rs_dataset["X"][0]
 
     if representation == "biocapsule":
         bc_gen = BioCapsuleGenerator()
         X_train = bc_gen.biocapsule_batch(X, rs_feature)
-
-    X = np.hstack([X, y[:, np.newaxis]])
 
     subject = {}
     for s_id, s in enumerate(os.listdir(os.path.join(
@@ -79,11 +78,11 @@ def get_lfw(method, representation):
         train_idx = 0
         for s in train:
             s_id = subject[s[0]]
-            s_features = X[y == s[0].encode()]
+            s_features = X[y == s[0]]
             assert (s_features.shape[0] == int(s[1]))
 
             for j in range(s_features.shape[0]):
-                lfw["train_{}".format(i)][train_idx] = np.append(s_features[j, :-1], s_id).astype(float)
+                lfw["train_{}".format(i)][train_idx] = np.append(s_features[j], s_id)
                 train_idx += 1
 
         assert (train_idx == train_cnt)
@@ -91,20 +90,20 @@ def get_lfw(method, representation):
         for test_idx, s in enumerate(test):
             if len(s) == 3:
                 s_id = subject[s[0]]
-                s_features = X[y == s[0].encode()]
+                s_features = X[y == s[0]]
                 lfw["test_{}".format(i)][test_idx,
-                                         0] = np.append(s_features[int(s[1]) - 1, :-1], s_id).astype(float)
+                                         0] = np.append(s_features[int(s[1]) - 1], s_id)
                 lfw["test_{}".format(i)][test_idx,
-                                         1] = np.append(s_features[int(s[2]) - 1, :-1], s_id).astype(float)
+                                         1] = np.append(s_features[int(s[2]) - 1], s_id)
             else:
                 s_id_1 = subject[s[0]]
-                s_features = X[y == s[0].encode()]
+                s_features = X[y == s[0]]
                 lfw["test_{}".format(i)][test_idx,
-                                         0] = np.append(s_features[int(s[1]) - 1, :-1], s_id_1).astype(float)
+                                         0] = np.append(s_features[int(s[1]) - 1], s_id_1)
                 s_id_2 = subject[s[2]]
-                s_features = X[y == s[2].encode()]
+                s_features = X[y == s[2]]
                 lfw["test_{}".format(i)][test_idx,
-                                         1] = np.append(s_features[int(s[3]) - 1, :-1], s_id_2).astype(float)
+                                         1] = np.append(s_features[int(s[3]) - 1], s_id_2)
 
         assert (test_idx == 599)
 

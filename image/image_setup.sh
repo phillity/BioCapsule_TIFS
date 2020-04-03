@@ -1,29 +1,28 @@
 #!/bin/bash
 
-vggface2_username=$1
-vggface2_password=$2
-
 cd image
 
-echo "Downloading and extracting VGGFace2 train images!"
-python vggface2_download.py train $vggface2_username $vggface2_password
-tar -xvzf vggface2_train.tar.gz
-rm vggface2_train.tar.gz
-echo "Downloading and extracting VGGFace2 test images!"
-python vggface2_download.py test $vggface2_username $vggface2_password
-tar -xvzf vggface2_test.tar.gz
-rm vggface2_test.tar.gz
-mkdir vggface2
-mv -v train/* vggface2/
-mv -v test/* vggface2/
-rm -r train test
+echo "Downloading and extracting Yalefaces images!"
+wget https://vismod.media.mit.edu/vismod/classes/mas622-00/datasets/YALE.tar.gz
+tar -xvf YALE.tar.gz
+mv YALE/faces yalefaces
+rm -r YALE YALE.tar.gz
+cd yalefaces
+find . -type f  ! -name "*.pgm"  -delete
+for i in {01..15}
+do
+   mkdir subject$i
+   mv subject$i.* subject$i/
+done
+cd ..
 
-echo "Downloading and extracting LFW images!"
-wget http://vis-www.cs.umass.edu/lfw/lfw.tgz
-wget http://vis-www.cs.umass.edu/lfw/pairs.txt
-wget http://vis-www.cs.umass.edu/lfw/people.txt
-tar -xvzf lfw.tgz
-rm lfw.tgz
+echo "Downloading and extracting YalefacesB images!"
+wget http://vision.ucsd.edu/extyaleb/ExtendedYaleB.tar.bz2
+tar -xvf ExtendedYaleB.tar.bz2
+mv ExtendedYaleB yalefacesb
+cd yalefacesb
+find . -type f  ! -name "yaleB??_P0?A*.pgm"  -delete
+cd ..
 
 echo "Downloading and extracting GTDB images!"
 wget http://www.anefian.com/research/gt_db.zip
@@ -93,6 +92,29 @@ mkdir s26
 for i in {0429..0450}; do mv image_$i.jpg s26/image_$i.jpg; done
 rm faces.tar ImageData.mat README image_0399.jpg image_0400.jpg image_0401.jpg image_0402.jpg image_0403.jpg
 cd ..
+
+echo "Downloading and extracting FEI images!"
+mkdir fei
+cd fei
+for i in {1..4}
+do
+   wget https://fei.edu.br/~cet/originalimages_part$i.zip
+   unzip originalimages_part$i.zip
+   rm originalimages_part$i.zip
+done
+for i in {1..200}
+do
+   mkdir subject$i/
+   mv $i-* subject$i/
+done
+cd ..
+
+echo "Downloading and extracting LFW images!"
+wget http://vis-www.cs.umass.edu/lfw/lfw.tgz
+wget http://vis-www.cs.umass.edu/lfw/pairs.txt
+wget http://vis-www.cs.umass.edu/lfw/people.txt
+tar -xvzf lfw.tgz
+rm lfw.tgz
 
 echo "Downloading and extracting RS images!"
 wget https://cs.iupui.edu/~phillity/rs.tar.gz

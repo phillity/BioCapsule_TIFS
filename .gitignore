@@ -7,18 +7,28 @@ src/model/facenet
 src/model/arcface
 src/model/mtcnn
 
-image_setup_util.sh
 rs
+yalefaces
+yalefacesb
 caltech
 gtdb
+fei
+feret_gray
+feret_color
+cmu_p
+cmu_i
+cmu_e
+cmu_l
 lfw
 pairs.txt
 people.txt
+vggface2_setup_util.sh
 vggface2
-vggface2_*
+vggface2_??
 train
 test
 
+*.txt
 *.hdf5
 *.jpg
 *.tar
