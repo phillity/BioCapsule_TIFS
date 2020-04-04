@@ -9,10 +9,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_validate
+import warnings
 from biocapsule import BioCapsuleGenerator
 
 
 np.random.seed(42)
+warnings.filterwarnings("always")
 
 
 def get_lfw(method, representation):
@@ -82,7 +84,8 @@ def get_lfw(method, representation):
             assert (s_features.shape[0] == int(s[1]))
 
             for j in range(s_features.shape[0]):
-                lfw["train_{}".format(i)][train_idx] = np.append(s_features[j], s_id)
+                lfw["train_{}".format(i)][train_idx] = np.append(
+                    s_features[j], s_id)
                 train_idx += 1
 
         assert (train_idx == train_cnt)

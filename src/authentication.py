@@ -12,10 +12,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from argparse import ArgumentParser
+import warnings
 from biocapsule import BioCapsuleGenerator
 
 
 np.random.seed(42)
+warnings.filterwarnings("always")
 
 
 def train_test_clf(c, X_train, y_train, X_test, y_test, queue):
@@ -37,13 +39,14 @@ def train_test_clf(c, X_train, y_train, X_test, y_test, queue):
 def authentication(dataset, method, representation, thread_cnt):
     # load data and setup output file
     out_file = open(os.path.join(os.path.abspath(""), "results",
-                                "authentication_{}_{}_{}.txt".format(dataset, method, representation)), "w")
+                                 "authentication_{}_{}_{}.txt".format(dataset, method, representation)), "w")
     feature_dataset = h5py.File(os.path.join(os.path.abspath(
         ""), "data", method, "{}.hdf5".format(dataset)), "r")
     rs_dataset = h5py.File(os.path.join(os.path.abspath(
         ""), "data", method, "rs.hdf5"), "r")
     X, y = feature_dataset["X"][:], feature_dataset["y"][:]
-    y = LabelEncoder().fit_transform(np.array([label.decode() for label in y])) + 1
+    y = LabelEncoder().fit_transform(
+        np.array([label.decode() for label in y])) + 1
     rs_feature = rs_dataset["X"][0]
 
     # remove subjects from lfw dataset with less than 5 images
@@ -72,8 +75,9 @@ def authentication(dataset, method, representation, thread_cnt):
 
         # split classes so we can spawn threads to train each binary classifier
         classes = np.unique(y_train)
-        classes_split = [classes[i:i + thread_cnt] for i in range(0, classes.shape[0], thread_cnt)]
-        
+        classes_split = [classes[i:i + thread_cnt]
+                         for i in range(0, classes.shape[0], thread_cnt)]
+
         # train binary classifiers
         y_prob = np.zeros((X_test.shape[0] * classes.shape[0],))
         y_true = np.zeros((X_test.shape[0] * classes.shape[0],))
@@ -96,7 +100,7 @@ def authentication(dataset, method, representation, thread_cnt):
         y_pred = np.around(y_prob)
         _, fp, fn, _ = confusion_matrix(y_true, y_pred).ravel()
         fprf, tprf, thresholds = roc_curve(y_true, y_prob)
-        
+
         fps.append(fp)
         fns.append(fn)
         acc.append(accuracy_score(y_true, y_pred))

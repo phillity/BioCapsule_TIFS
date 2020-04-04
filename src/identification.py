@@ -10,11 +10,13 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Activation
 from tensorflow.keras.callbacks import EarlyStopping
+import warnings
 from biocapsule import BioCapsuleGenerator
 
 
 np.random.seed(42)
 tf.compat.v1.set_random_seed(42)
+warnings.filterwarnings("always")
 
 
 def get_clf(input_shape, output_shape):
@@ -95,7 +97,7 @@ def identification(dataset, method, representation):
         else:
             y_pred = clf.predict(X_test)
         del X_test
-        
+
         # accumulate results
         err.append(np.sum(y_test != y_pred))
         acc.append(accuracy_score(y_test, y_pred))
